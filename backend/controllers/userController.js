@@ -1,7 +1,6 @@
 import User from '../models/userModel.js';
 import jwt from 'jsonwebtoken';
 import sendEmail from '../utils/sendEmail.js';
-import bcrypt from 'bcryptjs';
 import OtpModel from '../models/otpModel.js';
 
 
@@ -18,24 +17,17 @@ export const registerUser = async (req, res) => {
     const { email } = req.body;
 
     try {
-        // 1. Check if a verified user with this email already exists
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: 'A user with this email is already registered.' });
         }
 
-        // 2. Remove any previous, unverified registration attempts for this email
         await OtpModel.deleteOne({ email });
 
-        // 3. Generate a new OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-        // 4. Save all registration data to the temporary OtpModel collection
-        // The password will be hashed by the pre-save hook in otpModel
         const pendingUser = new OtpModel({ ...req.body, otp });
         await pendingUser.save();
 
-        // 5. Send the OTP email
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; background-color:#f9fafb; padding:30px;">
             <div style="max-width:600px; margin:auto; background:white; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); overflow:hidden;">
@@ -75,7 +67,7 @@ export const registerUser = async (req, res) => {
 };
 
 
-// 2. Verify OTP
+// 2. Verify OTP (UPDATED FUNCTION)
 export const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
   try {
@@ -84,31 +76,42 @@ export const verifyOtp = async (req, res) => {
     if (!pendingUser) {
       return res.status(400).json({ message: 'Invalid or expired OTP. Please register again.' });
     }
+    
+    // Explicitly create the new user data object to avoid conflicts
+    const newUserPayload = {
+        name: pendingUser.name,
+        email: pendingUser.email,
+        password: pendingUser.password,
+        role: pendingUser.role,
+        phone: pendingUser.phone,
+        address: pendingUser.address,
+        city: pendingUser.city,
+        zipcode: pendingUser.zipcode,
+        bloodGroup: pendingUser.bloodGroup,
+        gender: pendingUser.gender,
+        dateOfBirth: pendingUser.dateOfBirth,
+        ownerName: pendingUser.ownerName,
+        hospitalName: pendingUser.hospitalName,
+        isVerified: true,
+    };
 
-    const finalUserData = pendingUser.toObject();
-    delete finalUserData.otp;
-    delete finalUserData.createdAt;
-
-    const user = new User({
-      ...finalUserData,
-      isVerified: true,
-    });
+    const user = new User(newUserPayload);
 
     await user.save();
     await OtpModel.deleteOne({ email });
 
     const token = generateToken(user._id);
 
-    // Remove password from the final object before sending
     const userResponse = user.toObject();
     delete userResponse.password;
 
     res.status(200).json({
       message: 'Email verified successfully!',
-      user: userResponse, // <-- SEND THE FULL USER OBJECT
+      user: userResponse,
       token,
     });
   } catch (error) {
+    console.error("OTP Verification Error:", error); // For server-side debugging
     res.status(500).json({ message: 'Server error during OTP verification.', error: error.message });
   }
 };
@@ -134,13 +137,12 @@ export const loginUser = async (req, res) => {
 
     const token = generateToken(user._id);
 
-    // Remove password from the final object before sending
     const userResponse = user.toObject();
     delete userResponse.password;
 
     res.json({
       message: "Login successful!",
-      user: userResponse, // <-- SEND THE FULL USER OBJECT
+      user: userResponse,
       token,
     });
   } catch (error) {

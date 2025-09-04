@@ -1,0 +1,53 @@
+.blood-animation-background {
+  position: fixed; /* viewport এ fix */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 0; /* background layer */
+  background: transparent; /* transparent রাখো */
+  pointer-events: none;
+}
+
+@keyframes floatAndFade {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(60vh) scale(1);
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(110vh) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.blood-drop {
+  position: absolute;
+  top: -100px; 
+  background-color: rgb(255, 0, 0); 
+  border-radius: 50%;
+  filter: blur(2px);
+  animation: floatAndFade linear infinite;
+}
+
+
+.blood-drop-1 { width: 40px; height: 40px; left: 10%; animation-duration: 20s; animation-delay: 0s; }
+.blood-drop-2 { width: 60px; height: 60px; left: 30%; animation-duration: 25s; animation-delay: 5s; }
+.blood-drop-3 { width: 30px; height: 30px; left: 50%; animation-duration: 18s; animation-delay: 2s; }
+.blood-drop-4 { width: 70px; height: 70px; left: 70%; animation-duration: 30s; animation-delay: 8s; }
+.blood-drop-5 { width: 50px; height: 50px; left: 90%; animation-duration: 22s; animation-delay: 3s; }
+.blood-drop-6 { width: 35px; height: 35px; left: 20%; animation-duration: 28s; animation-delay: 10s; }
+.blood-drop-7 { width: 65px; height: 65px; left: 40%; animation-duration: 23s; animation-delay: 6s; }
+.blood-drop-8 { width: 45px; height: 45px; left: 60%; animation-duration: 19s; animation-delay: 1s; }
+.blood-drop-9 { width: 55px; height: 55px; left: 80%; animation-duration: 26s; animation-delay: 7s; }
+.blood-drop-10 { width: 25px; height: 25px; left: 5%; animation-duration: 21s; animation-delay: 4s; }

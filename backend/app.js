@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes
 app.get("/", (req, res) => {
-    res.send("BloodHub API is active...");
+    res.send("BloodFinder API is active...");
 });
 
 app.use('/api/users', userRoutes);

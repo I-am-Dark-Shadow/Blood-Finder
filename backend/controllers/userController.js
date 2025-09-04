@@ -77,7 +77,7 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired OTP. Please register again.' });
     }
     
-    // Explicitly create the new user data object to avoid conflicts
+    // Create the base user payload with common fields
     const newUserPayload = {
         name: pendingUser.name,
         email: pendingUser.email,
@@ -87,13 +87,20 @@ export const verifyOtp = async (req, res) => {
         address: pendingUser.address,
         city: pendingUser.city,
         zipcode: pendingUser.zipcode,
-        bloodGroup: pendingUser.bloodGroup,
-        gender: pendingUser.gender,
-        dateOfBirth: pendingUser.dateOfBirth,
-        ownerName: pendingUser.ownerName,
-        hospitalName: pendingUser.hospitalName,
         isVerified: true,
     };
+
+    // Conditionally add role-specific fields
+    if (pendingUser.role === 'User') {
+        newUserPayload.bloodGroup = pendingUser.bloodGroup;
+        newUserPayload.gender = pendingUser.gender;
+        newUserPayload.dateOfBirth = pendingUser.dateOfBirth;
+    } else { // For 'Blood Bank' and 'Test Lab'
+        newUserPayload.ownerName = pendingUser.ownerName;
+        if (pendingUser.role === 'Blood Bank') {
+            newUserPayload.hospitalName = pendingUser.hospitalName;
+        }
+    }
 
     const user = new User(newUserPayload);
 
@@ -151,6 +158,8 @@ export const loginUser = async (req, res) => {
 };
 
 
+// --- REST OF THE FILE REMAINS THE SAME ---
+
 // 4. Forgot Password
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
@@ -170,29 +179,20 @@ export const forgotPassword = async (req, res) => {
     const emailHtml = `
   <div style="font-family: Arial, sans-serif; background-color:#f9fafb; padding:30px;">
     <div style="max-width:600px; margin:auto; background:white; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); overflow:hidden;">
-      
-      <!-- Header -->
       <div style="background:linear-gradient(90deg, #dc2626, #ef4444); padding:20px; text-align:center; color:white;">
         <h1 style="margin:0; font-size:22px; font-weight:bold;">Blood Finder</h1>
         <p style="margin:5px 0 0; font-size:14px;">Reset your account password</p>
       </div>
-      
-      <!-- Body -->
       <div style="padding:25px; text-align:center;">
         <h2 style="color:#111827; margin-bottom:15px;">Password Reset Request 🔐</h2>
         <p style="font-size:15px; color:#374151;">We received a request to reset your <b>Blood Finder</b> account password.  
         Use the OTP below to set a new password.</p>
-        
-        <!-- OTP Card -->
         <div style="margin:25px auto; display:inline-block; background:#fef2f2; border:2px dashed #dc2626; border-radius:8px; padding:15px 25px;">
           <span style="font-size:28px; font-weight:bold; letter-spacing:6px; color:#b91c1c;">${otp}</span>
         </div>
-        
         <p style="font-size:14px; color:#6b7280; margin-top:10px;">This OTP is valid for <b>10 minutes</b>.  
         If you did not request a password reset, please ignore this email.</p>
       </div>
-      
-      <!-- Footer -->
       <div style="background:#f3f4f6; padding:15px; text-align:center; font-size:12px; color:#6b7280;">
         <p style="margin:0;">Need help? Contact us at <b>bloodfinder247@gmail.com</b></p>
         <p style="margin:5px 0 0;">&copy; 2025 Blood Finder</p>
@@ -233,12 +233,9 @@ export const resetPassword = async (req, res) => {
 };
 
 
-// --- New Profile Functions ---
-
 // 6. Get User Profile
 export const getUserProfile = async (req, res) => {
   try {
-    // req.user is attached by the 'protect' middleware
     const user = await User.findById(req.user.id).select('-password');
     if (user) {
       res.json(user);
@@ -250,7 +247,7 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
-// 7. Update User Profile (UPDATED to handle offeredTests array)
+// 7. Update User Profile
 export const updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -258,7 +255,7 @@ export const updateUserProfile = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Common fields for all roles
+    // Common fields
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
     user.phone = req.body.phone || user.phone;
@@ -266,7 +263,6 @@ export const updateUserProfile = async (req, res) => {
     user.city = req.body.city || user.city;
     user.zipcode = req.body.zipcode || user.zipcode;
 
-    // Set profile picture if a new one is uploaded
     if (req.file) {
       user.profilePicture = req.file.path;
     }
@@ -297,7 +293,7 @@ export const updateUserProfile = async (req, res) => {
   }
 };
 
-// 8. Change Password from Settings
+// 8. Change Password
 export const changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   try {
@@ -329,12 +325,12 @@ export const deactivateAccount = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    user.isActive = !user.isActive; // Toggle status
+    user.isActive = !user.isActive;
     const updatedUser = await user.save();
 
     res.status(200).json({ 
         message: `Account has been ${updatedUser.isActive ? 'activated' : 'deactivated'}.`,
-        user: updatedUser // Send back the updated user object
+        user: updatedUser
     });
 
   } catch (error) {
@@ -342,7 +338,7 @@ export const deactivateAccount = async (req, res) => {
   }
 };
 
-// NEW FUNCTION: Delete account with password verification
+// 10. Delete Account
 export const deleteAccount = async (req, res) => {
   const { password } = req.body;
   try {
@@ -360,7 +356,6 @@ export const deleteAccount = async (req, res) => {
       return res.status(401).json({ message: 'Incorrect password.' });
     }
 
-    // In a real app, you would also delete associated data (stock, etc.)
     await user.deleteOne();
 
     res.status(200).json({ message: 'Account has been permanently deleted.' });
